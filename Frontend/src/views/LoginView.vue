@@ -1,3 +1,27 @@
+<script setup>
+import { useAuthStore } from '@/stores/auth'
+import { ref } from 'vue'
+import { RouterLink } from 'vue-router'
+
+const authStore = useAuthStore()
+const email = ref('')
+const password = ref('')
+const errorMessage = ref('')
+const loading = ref(false)
+
+async function handleLogin() {
+  errorMessage.value = ''
+  loading.value = false
+  try {
+    await authStore.register(email.value, password.value)
+  } catch (error) {
+    errorMessage.value = error.response?.data?.message || 'Login failed.'
+  } finally {
+    loading.value = false
+  }
+}
+</script>
+
 <template>
   <!-- Form -->
   <div class="auth-panel">
@@ -7,17 +31,22 @@
         <p class="auth-card__subtitle">Enter your credentials to continue</p>
       </div>
 
-      <div class="auth-card__body">
+      <form class="auth-card__body" @submit.prevent="handleLogin">
+        <div v-if="errorMessage" class="form-error">
+          {{ errorMessage }}
+        </div>
         <!-- Email field -->
         <div class="form-group">
           <label class="form-label" for="email">Email Address</label>
           <input
+            v-model="email"
             class="form-input"
             type="email"
             id="email"
             name="email"
             placeholder="you@example.com"
             autocomplete="email"
+            required
           />
         </div>
 
@@ -25,14 +54,16 @@
         <div class="form-group">
           <label class="form-label" for="password">Password</label>
           <input
+            v-model="password"
             class="form-input form-input--error"
             type="password"
             id="password"
             name="password"
             placeholder="••••••••"
             autocomplete="current-password"
+            required
           />
-          <span class="form-error">
+          <span class="form-error" v-if="errorMessage">
             <svg
               width="13"
               height="13"
@@ -48,12 +79,14 @@
           </span>
         </div>
 
-        <button class="btn btn--primary btn--full" type="button">Sign In</button>
-      </div>
+        <button class="btn btn--primary btn--full" type="button">
+          {{ loading ? 'Signing In...' : 'Sign In' }}
+        </button>
+      </form>
 
       <div class="auth-card__footer">
         <span>Don't have an account?</span>
-        <a href="register.html">Create one</a>
+        <router-link to="/register">Create one</router-link>
       </div>
     </div>
   </div>

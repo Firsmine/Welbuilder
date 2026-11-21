@@ -52,7 +52,7 @@ router.beforeEach((to) => {
     return { name: 'pages' }
   }
   if (to.meta.requiresAuth && !authenticated) {
-    return { name: 'login', query: { redirect: to.fullPath } }
+    return { name: 'login' }
   }
 })
 
