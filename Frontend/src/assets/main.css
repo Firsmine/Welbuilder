@@ -6,8 +6,8 @@
 }
 
 /* ============================================================
-   VisualCraft — Global Stylesheet
-   Aesthetic: Minimalist Modern Bordered
+  VisualCraft — Global Stylesheet
+  Aesthetic: Minimalist Modern Bordered
    ============================================================ */
 
 /* ── CSS Variables ── */
@@ -92,7 +92,7 @@ textarea {
 }
 
 /* ============================================================
-   NAVBAR
+  NAVBAR
    ============================================================ */
 
 .navbar {
@@ -156,7 +156,7 @@ textarea {
 }
 
 /* ============================================================
-   BUTTONS
+  BUTTONS
    ============================================================ */
 
 .btn {
@@ -219,7 +219,7 @@ textarea {
 }
 
 /* ============================================================
-   FORM ELEMENTS
+  FORM ELEMENTS
    ============================================================ */
 
 .form-group {
@@ -295,7 +295,7 @@ select.form-input {
 }
 
 /* ============================================================
-   AUTH LAYOUT (Login / Register)
+  AUTH LAYOUT (Login / Register)
    ============================================================ */
 
 .auth-layout {
@@ -451,7 +451,7 @@ select.form-input {
 }
 
 /* ============================================================
-   APP LAYOUT (authenticated pages)
+  APP LAYOUT (authenticated pages)
    ============================================================ */
 
 .app-layout {
@@ -466,7 +466,7 @@ select.form-input {
 }
 
 /* ============================================================
-   PAGE CONTAINER
+  PAGE CONTAINER
    ============================================================ */
 
 .page-container {
@@ -507,7 +507,7 @@ select.form-input {
 }
 
 /* ============================================================
-   PAGES LIST
+  PAGES LIST
    ============================================================ */
 
 .pages-grid {
@@ -638,7 +638,7 @@ select.form-input {
 }
 
 /* ============================================================
-   MODAL / DIALOG
+  MODAL / DIALOG
    ============================================================ */
 
 .modal-backdrop {
@@ -736,7 +736,7 @@ select.form-input {
 }
 
 /* ============================================================
-   PAGE BUILDER LAYOUT
+  PAGE BUILDER LAYOUT
    ============================================================ */
 
 .builder-layout {
@@ -891,11 +891,11 @@ select.form-input {
 }
 
 /* Builder main area */
-/* .builder-main {
+.builder-main {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-} */
+}
 
 .builder-toolbar {
   display: flex;
@@ -1042,7 +1042,7 @@ select.form-input {
 }
 
 /* ============================================================
-   PAGE PREVIEW
+  PAGE PREVIEW
    ============================================================ */
 
 .preview-layout {
@@ -1188,7 +1188,7 @@ select.form-input {
 }
 
 /* ============================================================
-   UTILITY
+  UTILITY
    ============================================================ */
 
 .divider {
@@ -1311,7 +1311,7 @@ select.form-input {
 }
 
 /* ============================================================
-   PREVIEW: HERO SECTION (template: hero)
+  PREVIEW: HERO SECTION (template: hero)
    ============================================================ */
 
 .preview-hero-section {
@@ -1361,7 +1361,7 @@ select.form-input {
 }
 
 /* ============================================================
-   PREVIEW: ABOUT SECTION (template: about)
+  PREVIEW: ABOUT SECTION (template: about)
    ============================================================ */
 
 .preview-about {
@@ -1422,7 +1422,7 @@ select.form-input {
 }
 
 /* ============================================================
-   PREVIEW: SERVICES SECTION (template: services)
+  PREVIEW: SERVICES SECTION (template: services)
    ============================================================ */
 
 .preview-services__heading {
@@ -1492,7 +1492,7 @@ select.form-input {
 }
 
 /* ============================================================
-   PREVIEW: CONTACT SECTION (template: contact)
+  PREVIEW: CONTACT SECTION (template: contact)
    ============================================================ */
 
 .preview-contact {
@@ -1562,7 +1562,7 @@ select.form-input {
 }
 
 /* ============================================================
-   PREVIEW: FOOTER SECTION (template: footer)
+  PREVIEW: FOOTER SECTION (template: footer)
    ============================================================ */
 
 .preview-footer {
@@ -1648,7 +1648,7 @@ select.form-input {
 }
 
 /* ============================================================
-   RESPONSIVE — New Templates
+  RESPONSIVE — New Templates
    ============================================================ */
 
 @media (max-width: 760px) {
@@ -1717,7 +1717,7 @@ select.form-input {
 }
 
 /* ============================================================
-   RESPONSIVE — Tablet (max 900px)
+  RESPONSIVE — Tablet (max 900px)
    ============================================================ */
 
 @media (max-width: 900px) {
@@ -1784,7 +1784,7 @@ select.form-input {
 }
 
 /* ============================================================
-   RESPONSIVE — Mobile (max 600px)
+  RESPONSIVE — Mobile (max 600px)
    ============================================================ */
 
 @media (max-width: 600px) {

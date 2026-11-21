@@ -28,3 +28,7 @@ api.interceptors.response.use(
 )
 
 export default api
+
+export function isAuthenticated() {
+  return !!localStorage.getItem('token')
+}

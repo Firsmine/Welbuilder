@@ -4,6 +4,7 @@ import RegisterView from '@/views/RegisterView.vue'
 import BuilderView from '@/views/BuilderView.vue'
 import PagesView from '@/views/PagesView.vue'
 import PreviewView from '@/views/PreviewView.vue'
+import { isAuthenticated } from '@/services/api'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -43,6 +44,16 @@ const router = createRouter({
       redirect: '/login',
     },
   ],
+})
+
+router.beforeEach((to) => {
+  const authenticated = isAuthenticated()
+  if (to.meta.requiresGuest && authenticated) {
+    return { name: 'pages' }
+  }
+  if (to.meta.requiresAuth && !authenticated) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
 })
 
 export default router
