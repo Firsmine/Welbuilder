@@ -1,5 +1,198 @@
 <script setup>
 import NavBar from '@/components/NavBar.vue'
+import { useBuilderStore } from '@/stores/builder'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
+
+const route = useRoute()
+const router = useRouter()
+const builderStore = useBuilderStore()
+const slug = computed(() => route.params.slug)
+const expandedSectionId = ref(null)
+const showAddSectionPanel = ref(false)
+const showDeleteModal = ref(false)
+const deletingSection = ref(null)
+const sectionForm = ref({})
+const draggedSectionId = ref(null)
+
+onMounted(async () => {
+  window.addEventListener('keydown', handleKeyboard)
+  if (!slug.value) {
+    console.error('Missing page slug in route params:', route.params)
+    return
+  }
+  try {
+    await Promise.all([builderStore.fetchPage(slug.value), builderStore.fetchSections()])
+    document.title = `WelBuilder | ${builderStore.page?.title || 'Builder'}`
+  } catch (error) {
+    console.error('Failed to initialize builder:', error)
+  }
+})
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyboard)
+})
+// shortcuts
+function handleKeyboard(event) {
+  if (event.altKey && event.key.toLowerCase() === 's') {
+    event.preventDefault()
+    openAddSectionPanel()
+  }
+  if (event.key === 'Escape') {
+    if (showDeleteModal.value) {
+      closeDeleteModal()
+    } else {
+      closeAddSectionPanel()
+      expandedSectionId.value = null
+    }
+  }
+}
+// open close Section panel
+function openAddSectionPanel() {
+  showAddSectionPanel.value = true
+}
+function closeAddSectionPanel() {
+  showAddSectionPanel.value = false
+  builderStore.selectedSection = ''
+}
+async function handleAddSection() {
+  if (!builderStore.selectedSection) return
+  try {
+    const nextPosition = (builderStore.page?.sections?.length || 0) + 1
+
+    await builderStore.addSection(slug.value, {
+      template_id: builderStore.selectedTemplate,
+      position: nextPosition,
+    })
+    closeAddSectionPanel()
+  } catch (error) {
+    console.error('Failed to add section:', error.response?.data || error)
+  }
+}
+function normalizeFields(fields) {
+  if (fields && !Array.isArray(fields) && typeof fields === 'object') {
+    return { ...fields }
+  }
+  if (Array.isArray(fields)) {
+    return Object.fromEntries(fields.map((field) => [field.name, field.value ?? '']))
+  }
+  return {}
+}
+
+function getFieldDefinitions(section) {
+  const fields = section.template?.fields
+  if (Array.isArray(fields)) {
+    return fields
+  }
+  if (fields && typeof fields === 'object') {
+    return Object.entries(fields).map(([name, definition]) => ({
+      name,
+      ...(typeof definition === 'object' ? definition : {}),
+    }))
+  }
+  return Object.keys(normalizeFields(section.fields)).map((name) => ({
+    name,
+    label: name.replaceAll('_', ' '),
+    type: 'text',
+  }))
+}
+function getFieldValue(fieldName) {
+  return sectionForm.value[fieldName] ?? ''
+}
+
+// update
+function toggleSection(section) {
+  if (expandedSectionId.value === section.id) {
+    expandedSectionId.value = null
+    sectionForm.value = {}
+    return
+  }
+  expandedSectionId.value = section.id
+  sectionForm.value = normalizeFields(
+    section.fields?.length ? section.fields : section.template.fields,
+  )
+}
+async function saveSection(section) {
+  try {
+    const section = section.template?.fields
+      ? section.template
+      : builderStore.sections.find((t) => t.id === (section.template_id ?? section.template?.id))
+    const sectionFields = section.fields || []
+    const fields = sectionFields.map((field) => ({
+      field_id: field.id ?? field.field_id,
+      value: sectionForm.value[field.name] ?? '',
+    }))
+    await builderStore.updateSectionFields(slug.value, section.id, { fields })
+    expandedSectionId.value = null
+    sectionForm.value = {}
+    await builderStore.fetchPage(slug.value)
+  } catch (error) {
+    console.error('Failed to save section:', error.response?.data || error)
+  }
+}
+
+// delete
+function openDeleteModal(section) {
+  deletingSection.value = section
+  showDeleteModal.value = true
+}
+function closeDeleteModal() {
+  if (builderStore.saving) return
+  showDeleteModal.value = false
+  deletingSection.value = null
+}
+async function confirmDelete() {
+  if (!deletingSection.value) return
+  try {
+    await builderStore.deleteSection(slug.value, deletingSection.value.id)
+    if (expandedSectionId.value === deletingSection.value.id) {
+      expandedSectionId.value = null
+      sectionForm.value = {}
+    }
+    showDeleteModal.value = false
+    deletingSection.value = null
+  } catch (error) {
+    console.error('Failed to delete section:', error)
+  }
+}
+
+// drag n drop
+function startDrag(section) {
+  draggedSectionId.value = section.id
+}
+async function dropSection(targetSection) {
+  if (!draggedSectionId.value) return
+  const sections = builderStore.page?.sections || []
+  const oldIndex = sections.findIndex((section) => section.id === draggedSectionId.value)
+  const newIndex = sections.findIndex((section) => section.id === targetSection.id)
+  if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
+    draggedSectionId.value = null
+    return
+  }
+  // create ordered
+  const reorderedSections = [...sections]
+  const [movedSection] = reorderedSections.splice(oldIndex, 1)
+  reorderedSections.splice(newIndex, 0, movedSection)
+  try {
+    await builderStore.reorderSections(slug.value, {
+      sections: reorderedSections.map((section) => section.id),
+    })
+    builderStore.page.sections = reorderedSections.map((section, index) => ({
+      ...section,
+      position: index + 1,
+    }))
+  } catch (error) {
+    console.error('Failed to reorder sections:', error.response?.data || error)
+    await builderStore.fetchPage(slug.value)
+  } finally {
+    draggedSectionId.value = null
+  }
+}
+function endDrag() {
+  draggedSectionId.value = null
+}
+function goToPreview() {
+  router.push(`/itineraries/${slug.value}/preview`)
+}
 </script>
 <template>
   <div class="app-layout">
@@ -13,15 +206,15 @@ import NavBar from '@/components/NavBar.vue'
           <div class="builder-toolbar">
             <div class="builder-toolbar__left">
               <div class="builder-breadcrumb">
-                <a href="pages.html">Pages</a>
+                <RouterLink to="/pages">Pages</RouterLink>
                 <span>→</span>
-                <span>Homepage</span>
+                <span>{{ builderStore.page?.title }}</span>
               </div>
               <div class="builder-toolbar__divider"></div>
-              <span class="tag">3 sections</span>
+              <span class="tag">{{ builderStore.page?.sections?.length || 0 }} sections</span>
             </div>
             <div class="navbar__actions">
-              <a href="preview.html" class="btn btn--primary btn--sm">
+              <button class="btn btn--primary btn--sm" type="button" @click="openAddSectionPanel">
                 <svg
                   width="13"
                   height="13"
@@ -37,8 +230,13 @@ import NavBar from '@/components/NavBar.vue'
                   />
                 </svg>
                 Add Section
-              </a>
-              <a href="preview.html" class="btn btn--ghost btn--sm">
+              </button>
+              <Button
+                class="btn btn--ghost btn--sm"
+                type="button"
+                @click="goToPreview"
+                :disabled="!builderStore.page"
+              >
                 <svg
                   width="13"
                   height="13"
@@ -55,12 +253,16 @@ import NavBar from '@/components/NavBar.vue'
                   <circle cx="6.5" cy="6.5" r="1.75" stroke="currentColor" stroke-width="1.5" />
                 </svg>
                 Preview
-              </a>
+              </Button>
             </div>
           </div>
 
           <!-- Canvas -->
           <div class="builder-canvas">
+            <div v-if="builderStore.loading">Loading page...</div>
+            <div v-else-if="!builderStore.page">
+              {{ builderStore.error || 'Page not found.' }}
+            </div>
             <!-- Field editor: Hero Section (open/active) -->
             <div class="field-editor field-editor--open">
               <div class="field-editor__header">
@@ -90,6 +292,7 @@ import NavBar from '@/components/NavBar.vue'
                   </svg>
                 </div>
               </div>
+
               <div class="field-editor__body">
                 <div class="form-group">
                   <label class="form-label" for="f-hero-title">Heading</label>
@@ -203,10 +406,14 @@ import NavBar from '@/components/NavBar.vue'
             </div>
 
             <!-- Add Section inline panel -->
-            <div class="add-section-panel">
+            <div v-if="showAddSectionPanel" class="add-section-panel">
               <div class="add-section-panel__header">
                 <span class="add-section-panel__title">Add Section</span>
-                <button class="btn btn--ghost btn--sm btn--icon" type="button">
+                <button
+                  class="btn btn--ghost btn--sm btn--icon"
+                  type="button"
+                  @click="closeAddSectionPanel"
+                >
                   <svg
                     width="11"
                     height="11"
@@ -227,6 +434,7 @@ import NavBar from '@/components/NavBar.vue'
                 <div class="form-group" style="flex: 1">
                   <label class="form-label" for="section-name">Section Name</label>
                   <input
+                    v-model="builderStore.name"
                     type="text"
                     class="form-input"
                     id="section-name"
@@ -236,18 +444,31 @@ import NavBar from '@/components/NavBar.vue'
                 </div>
                 <div class="form-group" style="flex: 1">
                   <label class="form-label" for="section-template">Section Template</label>
-                  <select class="form-input" id="section-template" name="template_id">
-                    <option value="" disabled selected>Choose a template…</option>
-                    <option value="hero-banner">hero-banner — Hero Banner</option>
-                    <option value="feature-grid">feature-grid — Features Grid</option>
-                    <option value="cta-strip">cta-strip — Call to Action</option>
-                    <option value="text-block">text-block — Text Block</option>
-                    <option value="image-gallery">image-gallery — Image Gallery</option>
-                    <option value="testimonials">testimonials — Testimonials</option>
+                  <select
+                    class="form-input"
+                    id="section-template"
+                    name="template_id"
+                    v-model="builderStore.selectedTemplate"
+                  >
+                    <option value="" disabled>Choose a template...</option>
+                    <option
+                      v-for="template in builderStore.templates"
+                      :key="template.id"
+                      :value="template.id"
+                    >
+                      {{ template.slug }} —
+                      {{ template.name }}
+                    </option>
                   </select>
                 </div>
-                <button class="btn btn--primary" type="button" style="align-self: flex-start">
-                  Add
+                <button
+                  class="btn btn--primary"
+                  type="button"
+                  style="align-self: flex-start"
+                  :disabled="builderStore.saving || !builderStore.selectedTemplate"
+                  @click="handleAddSection"
+                >
+                  {{ builderStore.saving ? 'Adding...' : 'Add' }}
                 </button>
               </div>
             </div>
@@ -260,33 +481,71 @@ import NavBar from '@/components/NavBar.vue'
   </div>
 
   <!-- ======================================================
-       MODAL: Confirm Remove Section
-       ====================================================== -->
-  <!--
-  <div class="modal-backdrop">
-    <div class="modal confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-remove-title">
+      MODAL: Confirm Remove Section
+      ====================================================== -->
+  <div class="modal-backdrop" v-if="showDeleteModal" @click.self="closeDeleteModal">
+    <div
+      class="modal confirm-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-remove-title"
+    >
       <div class="modal__header">
         <h2 class="modal__title" id="modal-remove-title">Remove Section</h2>
-        <button class="modal__close" type="button" aria-label="Close">✕</button>
+        <button
+          class="modal__close"
+          type="button"
+          aria-label="Close"
+          :disabled="builderStore.saving"
+          @click="closeDeleteModal"
+        >
+          ✕
+        </button>
       </div>
       <div class="modal__body">
         <div class="confirm-dialog__icon">
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M11 4v7" stroke="#c0392b" stroke-width="2" stroke-linecap="square"/>
-            <circle cx="11" cy="16" r="1" fill="#c0392b"/>
-            <path d="M3 19L11 3l8 16H3z" stroke="#c0392b" stroke-width="2" stroke-linejoin="round"/>
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 22 22"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M11 4v7" stroke="#c0392b" stroke-width="2" stroke-linecap="square" />
+            <circle cx="11" cy="16" r="1" fill="#c0392b" />
+            <path
+              d="M3 19L11 3l8 16H3z"
+              stroke="#c0392b"
+              stroke-width="2"
+              stroke-linejoin="round"
+            />
           </svg>
         </div>
         <p class="confirm-dialog__text">
-          Remove <strong>"Hero Section"</strong> from this page?<br>
+          Remove
+          <strong>"{{ deletingSection?.title || deletingSection?.template?.name }}"</strong> from
+          this page?<br />
           This action cannot be undone.
         </p>
       </div>
       <div class="modal__footer">
-        <button class="btn btn--ghost" type="button">Cancel</button>
-        <button class="btn btn--danger" type="button">Ok, Remove</button>
+        <button
+          class="btn btn--ghost"
+          type="button"
+          :disabled="builderStore.saving"
+          @click="closeDeleteModal"
+        >
+          Cancel
+        </button>
+        <button
+          class="btn btn--danger"
+          type="button"
+          :disabled="builderStore.saving"
+          @click="confirmDelete"
+        >
+          {{ builderStore.saving ? 'Removing' : 'Ok, Remove' }}
+        </button>
       </div>
     </div>
   </div>
-  -->
 </template>
