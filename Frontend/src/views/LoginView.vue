@@ -79,7 +79,7 @@ async function handleLogin() {
           </span>
         </div>
 
-        <button class="btn btn--primary btn--full" type="button">
+        <button class="btn btn--primary btn--full" type="submit">
           {{ loading ? 'Signing In...' : 'Sign In' }}
         </button>
       </form>
